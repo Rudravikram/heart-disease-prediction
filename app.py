@@ -2,24 +2,15 @@ import streamlit as st
 import numpy as np
 import joblib
 
-# Load the trained model
+# Load the trained model and scaling data
 model = joblib.load("heart_disease_model.pkl")
-
-# Load the saved min and max values
-min_values = np.load("min_values.npy")
-max_values = np.load("max_values.npy")
-
-# Function to scale real input values using Min-Max scaling
-def scale_input(user_input, min_vals, max_vals):
-    return [
-        (val - minv) / (maxv - minv) if maxv != minv else 0
-        for val, minv, maxv in zip(user_input, min_vals, max_vals)
-    ]
+min_vals = np.load("min_values.npy")
+max_vals = np.load("max_values.npy")
 
 st.title("Heart Disease Prediction App")
 st.markdown("### Please enter the clinical values below:")
 
-# Define input labels and get user input
+# Input labels and default values (example values; adjust as needed)
 input_labels = [
     "Age (years)",
     "Sex (1 = male, 0 = female)",
@@ -36,19 +27,22 @@ input_labels = [
     "Thalassemia (0 = normal, 1 = fixed defect, 2 = reversible defect)"
 ]
 
+default_values = [55, 1, 0, 130, 250, 0, 1, 150, 0, 1.0, 1, 0, 2]
+
 user_inputs = []
-# Accept values from user
-for label in input_labels:
-    val = st.number_input(label, format="%.6f", value=0.0)
+for label, default in zip(input_labels, default_values):
+    val = st.number_input(label, value=float(default))
     user_inputs.append(val)
 
 if st.button("Predict"):
-    # Apply Min-Max Scaling before prediction
-    scaled_input = scale_input(user_inputs, min_values, max_values)
-    
-    prediction = model.predict([scaled_input])[0]
-    
+    # Normalize inputs using min-max scaling
+    normalized_input = [
+        (x - min_v) / (max_v - min_v) if max_v != min_v else 0.0
+        for x, min_v, max_v in zip(user_inputs, min_vals, max_vals)
+    ]
+
+    prediction = model.predict([normalized_input])[0]
     if prediction == 1:
-        st.error("Prediction: High Risk of Heart Disease")
+        st.error("🩺 Prediction: High Risk of Heart Disease")
     else:
-        st.success("Prediction: Low Risk / No Heart Disease")
+        st.success("💖 Prediction: Low Risk / No Heart Disease")
